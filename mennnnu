@@ -1,0 +1,151 @@
+local Parent = (gethui and gethui()) or game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+if Parent:FindFirstChild("OzelKeySistemi") then
+    Parent.OzelKeySistemi:Destroy()
+end
+
+local GitHubRawLink = "https://raw.githubusercontent.com/PrivxHub/aass/refs/heads/main/apsnd"
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "OzelKeySistemi"
+ScreenGui.Parent = Parent
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 350, 0, 220)
+Frame.Position = UDim2.new(0.5, -175, 0.5, -110)
+Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Frame.BorderSizePixel = 0
+Frame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = Frame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundTransparency = 1
+Title.Text = "Key Doğrulama"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 18
+Title.Font = Enum.Font.GothamBold
+Title.Parent = Frame
+
+local TextBox = Instance.new("TextBox")
+TextBox.Size = UDim2.new(0, 300, 0, 40)
+TextBox.Position = UDim2.new(0.5, -150, 0, 60)
+TextBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextBox.PlaceholderText = "Anahtarı buraya girin..."
+TextBox.Text = ""
+TextBox.TextSize = 14
+TextBox.Font = Enum.Font.Gotham
+TextBox.Parent = Frame
+
+local TextBoxCorner = Instance.new("UICorner")
+TextBoxCorner.CornerRadius = UDim.new(0, 6)
+TextBoxCorner.Parent = TextBox
+
+local Button = Instance.new("TextButton")
+Button.Size = UDim2.new(0, 300, 0, 40)
+Button.Position = UDim2.new(0.5, -150, 0, 110)
+Button.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
+Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+Button.Text = "Süreyi Kontrol Et"
+Button.TextSize = 16
+Button.Font = Enum.Font.GothamBold
+Button.Parent = Frame
+
+local ButtonCorner = Instance.new("UICorner")
+ButtonCorner.CornerRadius = UDim.new(0, 6)
+ButtonCorner.Parent = Button
+
+local Status = Instance.new("TextLabel")
+Status.Size = UDim2.new(1, 0, 0, 30)
+Status.Position = UDim2.new(0, 0, 0, 160)
+Status.BackgroundTransparency = 1
+Status.Text = "Durum: Anahtar bekleniyor..."
+Status.TextColor3 = Color3.fromRGB(180, 180, 180)
+Status.TextSize = 13
+Status.Font = Enum.Font.Gotham
+Status.Parent = Frame
+
+local Watermark = Instance.new("TextLabel")
+Watermark.Size = UDim2.new(1, 0, 0, 20)
+Watermark.Position = UDim2.new(0, 0, 0, 195)
+Watermark.BackgroundTransparency = 1
+Watermark.Text = "PrivX scripts"
+Watermark.TextColor3 = Color3.fromRGB(100, 100, 100)
+Watermark.TextSize = 11
+Watermark.Font = Enum.Font.Gotham
+Watermark.Parent = Frame
+
+local function MetniTemizle(Metin)
+    if not Metin then return "" end
+    return string.gsub(Metin, "[%c%s]", "")
+end
+
+local function AnahtariKontrolEt(GirilenKey)
+    local Basarili, Sonuc = pcall(function()
+        return game:HttpGet(GitHubRawLink)
+    end)
+    
+    if not Basarili or Sonuc == "" then
+        return false, "Bağlantı Hatası: GitHub okunamadı.", nil
+    end
+
+    local SuAnkiSaniye = os.time()
+    local TemizGirilenKey = MetniTemizle(GirilenKey)
+
+    for Satir in string.gmatch(Sonuc, "[^\r\n]+") do
+        local Parcalar = string.split(Satir, ":")
+        if #Parcalar >= 2 then
+            local DosyadakiKey = MetniTemizle(Parcalar[1])
+            local BitisSaniyesiMetni = MetniTemizle(Parcalar[2])
+            
+            if DosyadakiKey == TemizGirilenKey and BitisSaniyesiMetni ~= "" then
+                local BitisSaniyesi = tonumber(BitisSaniyesiMetni)
+                
+                if BitisSaniyesi then
+                    if SuAnkiSaniye < BitisSaniyesi then
+                        local KalanSaniye = BitisSaniyesi - SuAnkiSaniye
+                        local KalanSaat = math.floor(KalanSaniye / 3600)
+                        local KalanDakika = math.floor((KalanSaniye % 3600) / 60)
+                        return true, "Geçerli", KalanSaat .. " saat " .. KalanDakika .. " dk"
+                    else
+                        return false, "Bu anahtarın süresi dolmuş!", nil
+                    end
+                end
+            end
+        end
+    end
+    return false, "Geçersiz veya hatalı anahtar!", nil
+end
+
+Button.MouseButton1Click:Connect(function()
+    if TextBox.Text == "" then
+        Status.Text = "Durum: Lütfen bir anahtar girin!"
+        Status.TextColor3 = Color3.fromRGB(255, 80, 80)
+        return
+    end
+
+    Status.Text = "Durum: Kontrol ediliyor..."
+    Status.TextColor3 = Color3.fromRGB(200, 200, 50)
+    Button.Text = "Bekleyin..."
+
+    local Durum, Mesaj, KalanSure = AnahtariKontrolEt(TextBox.Text)
+
+    if Durum == true then
+        Status.Text = "Başarılı! Kalan Süre: " .. KalanSure
+        Status.TextColor3 = Color3.fromRGB(80, 255, 80)
+        Button.Text = "Onaylandı"
+        Button.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
+        
+        print("Script aktif! Doğrulama başarılı.")
+        
+        task.wait(2)
+        ScreenGui:Destroy()
+    else
+        Status.Text = "Hata: " .. Mesaj
+        Status.TextColor3 = Color3.fromRGB(255, 80, 80)
+        Button.Text = "Tekrar Dene"
+    end
+end)
